@@ -20,6 +20,18 @@ dataRef.on('child_added', function(data) {
 
     values.push([ unixTime, data.val() ]);
 
+    // max 120 data points
+    if (values.length > 120) {
+	values.shift();
+    }
+
+    var tMin = values[0][1];
+    var tMax = values[0][1];
+    for (i = 1; i<values.length; i++)  {
+	tMin = Math.min(tMin,values[i][1]);
+	tMax = Math.max(tMax,values[i][1]);
+    }
+    var deltaT = tMax - tMin;
     var zingConfig = { type: "line",
 		       series: [{ values: values }],
 		       scaleX: {
@@ -29,7 +41,8 @@ dataRef.on('child_added', function(data) {
 			   }
 		       },
 		       scaleY: {
-			   values: "65:90:5"
+			   "min-value": (tMin - deltaT/10),
+			   "max-value": (tMax + deltaT/10)
 		       }
 		     };
     zingchart.render({id: "chart", data: zingConfig, height: 400 });
