@@ -11,13 +11,13 @@ var database = firebase.database();
 var values = [];
 
 var dataRef = firebase.database().ref('rest')
-dataRef.on('child_added', function(data) { 
-    var dataDiv = $("#data");
-    var unixTime = data.key * 1000;
-    var date = new Date(unixTime);
-    var dateStr = date.toLocaleTimeString();
-//    dataDiv.prepend("<div>" + dateStr+ ": " + data.val() + "</div>");
+ 
+var now = new Date().getTime() / 1000;
+var twoHoursAgo = Math.round(now - (60*60*2));
 
+var query = dataRef.orderByKey().startAt(twoHoursAgo.toString());
+query.on('child_added', function(data) { 
+    var unixTime = data.key * 1000
     values.push([ unixTime, data.val() ]);
 
     // max 120 data points
