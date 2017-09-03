@@ -6,11 +6,20 @@
   integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
   crossorigin="anonymous"></script>
     <script src="https://cdn.zingchart.com/zingchart.min.js"></script>
-    <script src="script.js"></script>
   </head>
   <body>
     <h1>Temperature</h1>
+    <form id="t-range-form">
+	<select id="t-range-select">
+	   <option id="pastHour" value="1hour">Past hour</option>
+	   <option id="past2Hours" value="2hours">Past 2 hours</option>
+	   <option id="past4Hours" value="4hours">Past 4 hours</option>
+	   <option id="pastDay" value="1day">Past day</option>
+	   <option id="past2Days" value="2days">Past 2 days</option>
+	   <option id="pastWeek" value="1week">Past week</option>
+	</select>   
+    </form>
     <div id="chart"></div>
-    <div id="data"></div>
   </body>
+    <script src="script.js"></script>
 </html>
