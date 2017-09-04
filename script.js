@@ -119,17 +119,17 @@ var TemperatureChart = (function() {
         var unitCode = intervalStr.slice(-1);
         var unit;
         switch (unitCode) {
-        case "h":
-            unit = HOUR;
-            break;
-        case "d":
-            unit = DAY;
-            break;
-        case "w":
-            unit = 7*DAY;
-            break;
-        default:
-            return;
+            case "h":
+                unit = HOUR;
+                break;
+            case "d":
+                unit = DAY;
+                break;
+            case "w":
+                unit = 7*DAY;
+                break;
+            default:
+                return;
         }
 
         var quantityStr = intervalStr.slice(0, -1);
