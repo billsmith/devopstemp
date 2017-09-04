@@ -5,41 +5,53 @@ var config = {
 
 firebase.initializeApp(config);
 
+
+// Reminder:
+// * Firebase keys are in unixtime, i.e. seconds since epoch.
+// * zingChart wants time in milliseconds since epoch.
+//
 var TemperatureChart = (function() {
     var points = [];
     var dataRef = firebase.database().ref('rest')
     var updatingQuery = null;
+    var timeInterval = null;
+    var HOUR = 60*60;
+    var DAY = 24*HOUR;
+    var autoUpdate = null;
+    var CHILD_ADDED = 'child_added';
     
     /*
      * Find the newest key that's not newer than tmax, then call something else to do something
      * with that number.
      */
-    var findMaxKey = function(tmin, tmax) {
-        // find newest key at least as old as tmax
-        var query = dataRef.orderByKey().limitToLast(1);
-        query.on('child_added', function(data) {
-            query.off('child_added');
-            loadPoints(tmin, data.key);
+    var findMaxKey = function(tMin, tMax) {
+        var query = dataRef
+            .orderByKey()
+            .endAt(tMax.toString())
+            .limitToLast(1);
+        query.on(CHILD_ADDED, function(data) {
+            query.off(CHILD_ADDED);
+            loadPoints(tMin, data.key);
         });
     };
 
 
     /*
-     * Load all points whose keys are between tminand keyMax, inclusive, then
+     * Load all points whose keys are between tmin and maxKey, inclusive, then
      * call something else with that data.
      */
-    var loadPoints = function(tmin, keyMax) {
-        updatingQuery = dataRef
+    var loadPoints = function(tmin, maxKey) {
+        var query = dataRef
             .orderByKey()
             .startAt(tmin.toString())
-            .endAt(keyMax.toString());
+            .endAt(maxKey.toString());
         points = [];
-        updatingQuery.on('child_added', function(data) {
+        query.on(CHILD_ADDED, function(data) {
             var point = [ data.key * 1000, data.val() ];
             points.push(point);
-            if (data.key >= keyMax) {
-                updatingQuery.off('child_added');
-                makeRefreshingChart(keyMax, points);
+            if (data.key >= maxKey) {
+                query.off(CHILD_ADDED);
+                makeRefreshingChart(maxKey, points);
             }
         });
     };
@@ -47,14 +59,15 @@ var TemperatureChart = (function() {
     /*
      * Graph the points, then register a callback to update when more points show up
      */
-    var makeRefreshingChart = function(keyMax) {
-        makeChart(keyMax);
+    var makeRefreshingChart = function(maxKey) {
+        makeChart(maxKey);
 
-        var query = dataRef
-            .orderByKey()
-            .startAt(keyMax)
-            .on("child_added", function(data) {
-                if (data.key == keyMax) {
+        if (autoUpdate){
+            updatingQuery = dataRef
+                .orderByKey()
+                .startAt(maxKey);
+            updatingQuery.on("child_added", function(data) {
+                if (data.key == maxKey) {
                     // avoid infinite loop
                     return;
                 }
@@ -67,9 +80,10 @@ var TemperatureChart = (function() {
 
                 makeChart(data.key);
             });
+        }
     };
 
-    var makeChart = function(keyMax) {
+    var makeChart = function(maxKey) {
         var tempMin = points[0][1];
         var tempMax = points[0][1];
         for (i = 1; i<points.length; i++)  {
@@ -84,7 +98,7 @@ var TemperatureChart = (function() {
             scaleX: {
                 transform: {
                     type: 'date',
-                    all: '%h:%i %A'
+                    all: '%m/%d\n%H:%i'
                 }
             },
             scaleY: {
@@ -95,43 +109,66 @@ var TemperatureChart = (function() {
         zingchart.render({id: "chart", data: zingConfig, height: 400 });
     }
 
-    var updateTimeRange = function(type) {
+    var updateTimeRange = function(intervalStr) { // more flexible parameter, e.g. hash
         if (updatingQuery) {
-            updatingQuery.off('child_added');
+            updatingQuery.off(CHILD_ADDED);
+            updatingQuery = null;
         }
-        var now = new Date().getTime() / 1000;
-        switch (type) {
-        case "1hour":
-            var oneHourAgo = Math.round(now - (60*60));
-            findMaxKey(oneHourAgo, now);
+        var now = Math.round(new Date().getTime() / 1000);
+        
+        var unitCode = intervalStr.slice(-1);
+        var unit;
+        switch (unitCode) {
+        case "h":
+            unit = HOUR;
             break;
-        case "2hours":
-            var twoHoursAgo = Math.round(now - (2*60*60));
-            findMaxKey(twoHoursAgo, now);
+        case "d":
+            unit = DAY;
             break;
-        case "4hours":
-            var fourHoursAgo = Math.round(now - (4*60*60));
-            findMaxKey(fourHoursAgo, now);
+        case "w":
+            unit = 7*DAY;
             break;
-        case "1day":
-            var oneDayAgo = Math.round(now - (24*60*60));
-            findMaxKey(oneDayAgo, now);
-            break;
-        case "2days":
-            var twoDaysAgo = Math.round(now - (2*24*60*60));
-            findMaxKey(twoDaysAgo, now);
-            break;
-        case "1week":
-            var oneWeekAgo = Math.round(now - (7*24*60*60));
-            findMaxKey(oneWeekAgo, now);
-            break;
+        default:
+            return;
         }
+
+        var quantityStr = intervalStr.slice(0, -1);
+        var quantity = Number.parseInt(quantityStr, 10);
+
+        timeInterval = quantity * unit;
+
+        var tMin = now - timeInterval;
+        autoUpdate = true;
+        findMaxKey(tMin, now);
+    };
+
+    var moveEarlier = function(tMin, tMax) {
+        if (updatingQuery) {
+            updatingQuery.off(CHILD_ADDED);
+            updatingQuery = null;
+        }
+        var tMin = Math.round(points[0][0]/1000);
+        autoUpdate = false;
+        findMaxKey(tMin-timeInterval, tMin);
+    };
+
+    var moveLater = function(tMin, tMax) {
+        if (updatingQuery) {
+            updatingQuery.off(CHILD_ADDED);
+            updatingQuery = null;
+        }
+        var tMax = Math.round(points[points.length-1][0]/1000);
+        autoUpdate = false;
+        findMaxKey(tMax, tMax + timeInterval);
     };
 
     return {
-        updateTimeRange: updateTimeRange
+        updateTimeRange: updateTimeRange,
+        moveEarlier: moveEarlier,
+        moveLater: moveLater
     };
 })();
+
 
 $("#t-range-select").on("change", function() {
     var optionSelected = $("#t-range-select").find("option:selected");
@@ -139,6 +176,14 @@ $("#t-range-select").on("change", function() {
     TemperatureChart.updateTimeRange(rangeType);
 });
 
-TemperatureChart.updateTimeRange("1hour");
+$("#earlier").click(function() {
+    TemperatureChart.moveEarlier();
+});
+
+$("#later").click(function() {
+    TemperatureChart.moveLater();
+});
+
+TemperatureChart.updateTimeRange("2h");
 
 
