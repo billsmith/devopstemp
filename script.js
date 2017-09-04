@@ -108,6 +108,13 @@ var TemperatureChart = (function() {
             }
         };
         zingchart.render({id: "chart", data: zingConfig, height: 400 });
+
+        zingchart.bind('chart', 'zoom', function(e) {
+	    zoomVisibility();
+            disableUpdatingQuery();
+            unselectRangeType();
+        });
+
     }
 
     var updateTimeRange = function(intervalStr) { // more flexible parameter, e.g. hash
@@ -144,16 +151,16 @@ var TemperatureChart = (function() {
     };
 
     var moveEarlier = function(tMin, tMax) {
-	disableUpdatingQuery();
-	unselectRangeType();
+        disableUpdatingQuery();
+        unselectRangeType();
         var tMin = Math.round(points[0][0]/1000);
         autoUpdate = false;
         findMaxKey(tMin-timeInterval, tMin);
     };
 
     var moveLater = function(tMin, tMax) {
-	disableUpdatingQuery();
-	unselectRangeType();
+        disableUpdatingQuery();
+        unselectRangeType();
         var tMax = Math.round(points[points.length-1][0]/1000);
         autoUpdate = false;
         findMaxKey(tMax, tMax + timeInterval);
@@ -164,16 +171,32 @@ var TemperatureChart = (function() {
             updatingQuery.off(CHILD_ADDED);
             updatingQuery = null;
         }
-    }	
+    };  
 
     var unselectRangeType = function() {
-	$("#t-range-select").val([]);
-    }
+        $("#t-range-select").val([]);
+    };
 
+    var unzoom = function() {
+        zingchart.exec('chart', 'viewall');
+	$("#earlier").css("visibility", "visible");
+	$("#t-range-select").css("visibility", "visible");
+	$("#later").css("visibility", "visible");
+        $("#unzoom").css("visibility", "hidden");
+    };
+
+    var zoomVisibility = function() {
+	$("#earlier").css("visibility", "hidden");
+	$("#t-range-select").css("visibility", "hidden");
+	$("#later").css("visibility", "hidden");
+        $("#unzoom").css("visibility", "visible");
+    };
+    
     return {
         updateTimeRange: updateTimeRange,
         moveEarlier: moveEarlier,
-        moveLater: moveLater
+        moveLater: moveLater,
+        unzoom: unzoom
     };
 })();
 
@@ -190,6 +213,10 @@ $("#earlier").click(function() {
 
 $("#later").click(function() {
     TemperatureChart.moveLater();
+});
+
+$("#unzoom").click(function() {
+    TemperatureChart.unzoom();
 });
 
 TemperatureChart.updateTimeRange("2h");
