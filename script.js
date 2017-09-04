@@ -99,7 +99,8 @@ var TemperatureChart = (function() {
                 transform: {
                     type: 'date',
                     all: '%m/%d\n%H:%i'
-                }
+                },
+                zooming: true
             },
             scaleY: {
                 "min-value": (tempMin - deltaTemp/10),
@@ -143,24 +144,31 @@ var TemperatureChart = (function() {
     };
 
     var moveEarlier = function(tMin, tMax) {
-        if (updatingQuery) {
-            updatingQuery.off(CHILD_ADDED);
-            updatingQuery = null;
-        }
+	disableUpdatingQuery();
+	unselectRangeType();
         var tMin = Math.round(points[0][0]/1000);
         autoUpdate = false;
         findMaxKey(tMin-timeInterval, tMin);
     };
 
     var moveLater = function(tMin, tMax) {
-        if (updatingQuery) {
-            updatingQuery.off(CHILD_ADDED);
-            updatingQuery = null;
-        }
+	disableUpdatingQuery();
+	unselectRangeType();
         var tMax = Math.round(points[points.length-1][0]/1000);
         autoUpdate = false;
         findMaxKey(tMax, tMax + timeInterval);
     };
+
+    var disableUpdatingQuery = function() {
+        if (updatingQuery) {
+            updatingQuery.off(CHILD_ADDED);
+            updatingQuery = null;
+        }
+    }	
+
+    var unselectRangeType = function() {
+	$("#t-range-select").val([]);
+    }
 
     return {
         updateTimeRange: updateTimeRange,
