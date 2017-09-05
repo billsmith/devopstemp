@@ -219,6 +219,7 @@ $("#unzoom").click(function() {
     TemperatureChart.unzoom();
 });
 
+$("#past2Hours").prop("selected", true);
 TemperatureChart.updateTimeRange("2h");
 
 

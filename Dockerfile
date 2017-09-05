@@ -1,4 +1,3 @@
-FROM ubuntu
-RUN apt-get update && apt-get install -y nodejs np
+FROM node:boron
 RUN npm install -g firebase-tools
 
