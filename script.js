@@ -10,9 +10,9 @@ firebase.initializeApp(config);
 // * Firebase keys are in unixtime, i.e. seconds since epoch.
 // * zingChart wants time in milliseconds since epoch.
 //
-var TemperatureChart = (function() {
+var TemperatureChartInit = function(root) {
     var points = [];
-    var dataRef = firebase.database().ref('rest')
+    var dataRef = firebase.database().ref(root)
     var updatingQuery = null;
     var timeInterval = null;
     var HOUR = 60*60;
@@ -198,9 +198,10 @@ var TemperatureChart = (function() {
         moveLater: moveLater,
         unzoom: unzoom
     };
-})();
+};
 
-
+function ChartInit(root) {
+    var TemperatureChart = TemperatureChartInit(root);
 $("#t-range-select").on("change", function() {
     var optionSelected = $("#t-range-select").find("option:selected");
     var rangeType = optionSelected.val();
@@ -221,5 +222,6 @@ $("#unzoom").click(function() {
 
 $("#past2Hours").prop("selected", true);
 TemperatureChart.updateTimeRange("2h");
+}
 
 
